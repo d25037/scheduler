@@ -22,9 +22,6 @@ def make_schedule(staffs: StaffList, holiday: list[Weekday] | None):
             )
             examination_room[room_name].update({time: selected_staff.name})
 
-            pprint(f"i={i}, {selected_staff}")
-            pprint(f"i={i}, examination_room: {examination_room}")
-
     return (examination_room, staffs)
 
 
