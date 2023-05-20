@@ -111,7 +111,10 @@ def read_schedule(
         if excel_row.am_row is None or excel_row.pm_row is None:
             continue
 
-        for column in columns:
+        for column in columns.data:
+            if column.col_number is None:
+                continue
+
             am_value = excel_row.am_row[column.col_number]
             pm_value = excel_row.pm_row[column.col_number]
 

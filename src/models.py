@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from random import choice
 from typing import Any, Literal, TypeAlias
 
-from pydantic import BaseModel, FilePath, validator
+from pydantic import BaseModel, DirectoryPath, FilePath, validator
 from pydantic.dataclasses import dataclass
 
 Weekday: TypeAlias = Literal["monday", "tuesday", "wednesday", "thursday", "friday"]
@@ -119,6 +119,11 @@ class StaffList(UserList):
             list(filter(lambda x: x.schedule.get(schedule) in works, self.data))
         )
 
+    def filter_by_schedule_exclude_list(self, schedule: str, excludes: list[str]):
+        filtered = filter(lambda x: x.schedule.get(schedule), self.data)
+        re_filtered = [x for x in filtered if x.schedule.get(schedule) not in excludes]
+        return StaffList(re_filtered)
+
     def update_staff(self, name: str, time: str, room_name: Room):
         for staff in self.data:
             if staff.name == name:
@@ -132,7 +137,7 @@ class StaffList(UserList):
         am = f"{weekday}_am"
         pm = f"{weekday}_pm"
         noon = f"{weekday}_noon"
-        exclude_words = ("①", "②", "③", "外勤", "IVR")
+        exclude_words = ("①", "②", "③", "外勤", "IVR", "センター", "みなとみらい")
 
         filtered = list(
             filter(
@@ -145,14 +150,8 @@ class StaffList(UserList):
         )
 
         if selected_staffs and filtered:
-            return StaffList(
-                list(
-                    filter(
-                        lambda x: x.name not in selected_staffs,
-                        filtered,
-                    )
-                )
-            )
+            re_filtered = [x for x in filtered if x.name not in selected_staffs]
+            return StaffList(re_filtered)
 
         return StaffList(filtered)
 
@@ -163,8 +162,8 @@ class Column(BaseModel):
     schedule: dict[str, str] = {}
 
 
-@dataclass
-class ColumnList(UserList):
+# @dataclass
+class ColumnList(BaseModel):
     data: list[Column]
 
     def filter_one_by_name(self, value) -> Column:
@@ -173,7 +172,9 @@ class ColumnList(UserList):
 
 
 class AppSettings(BaseModel):
-    file_path: FilePath
+    all_schedule_file_path: FilePath
+    output_template_file_path: FilePath
+    output_directory_path: DirectoryPath
     year: int
     month: int
     day: int
@@ -212,7 +213,7 @@ class AppSettings(BaseModel):
         return StaffList(self.staffs)
 
     def get_columns_list(self) -> ColumnList:
-        return ColumnList(list(map(lambda x: Column(name=x), self.column_list)))
+        return ColumnList(data=list(map(lambda x: Column(name=x), self.column_list)))
 
     def month_to_str(self) -> str:
         return str(self.month) + "月"

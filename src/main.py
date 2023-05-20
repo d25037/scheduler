@@ -1,4 +1,5 @@
 import datetime
+import os
 from time import perf_counter
 from typing import cast
 
@@ -29,7 +30,7 @@ def main():
         print(settings)
         return
 
-    wb = read_original_excel(settings.file_path)
+    wb = read_original_excel(settings.all_schedule_file_path)
     if isinstance(wb, FileNotFoundError):
         return print(wb)
 
@@ -64,18 +65,11 @@ def main():
 
     noon_room, staffs = make_noon(staffs=staffs, holiday=settings.holiday)
 
-    # pprint("検査室")
-    # pprint(examination_room)
-    # pprint("昼番")
-    # pprint(noon_room)
-    # pprint("スタッフ表")
-    # pprint(staffs)
-
     examination_room, staffs = modify_examination_room(
         examination_room=examination_room, staffs=staffs, holiday=settings.holiday
     )
 
-    output_template = read_template()
+    output_template = read_template(settings.output_template_file_path)
     if isinstance(output_template, FileNotFoundError):
         return print("oops")
 
@@ -88,9 +82,13 @@ def main():
     )
 
     dt_now = datetime.datetime.now()
-    dt_now_str = dt_now.strftime("%Y%m%d_%H%M%S")
+    dt_now_str = dt_now.strftime("%Y%m%d%H%M%S")
+    monday = settings.get_date().strftime("%Y%m%d")
 
-    wb_created.save(f"schedule_{dt_now_str}.xlsx")
+    output_file_path = os.path.join(
+        settings.output_directory_path, f"schedule_{monday}_{dt_now_str}.xlsx"
+    )
+    wb_created.save(output_file_path)
 
     return
 

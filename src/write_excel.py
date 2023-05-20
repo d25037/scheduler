@@ -1,10 +1,9 @@
-from models import AppSettings, ColumnList, StaffList
+from models import AppSettings, ColumnList, FilePath, StaffList
 from openpyxl import Workbook, load_workbook
 
 
-def read_template() -> Workbook | FileNotFoundError:
+def read_template(file_path: FilePath) -> Workbook | FileNotFoundError:
     try:
-        file_path = "./templates/output_template.xlsx"
         wb: Workbook = load_workbook(file_path)
         return wb
     except FileNotFoundError as e:
@@ -81,6 +80,32 @@ def write_cells(
                     for j, mem in enumerate(member):
                         ws.cell(row=row + j, column=2 + num, value=mem.name)
 
+            case "その他":
+                exclude_words = [
+                    "CT",
+                    "MR",
+                    "RI",
+                    "IVR",
+                    "①",
+                    "②",
+                    "③",
+                    "外勤",
+                    "センター",
+                    "みなとみらい",
+                    "US",
+                    "藤沢",
+                ]
+
+                for num, value in enumerate(days):
+                    member = staffs.filter_by_schedule_exclude_list(
+                        schedule=value, excludes=exclude_words
+                    )
+
+                    if len(member) == 0:
+                        continue
+                    for j, mem in enumerate(member):
+                        ws.cell(row=row + j, column=2 + num, value=mem.name)
+
             case "休暇":
                 for num, value in enumerate(days):
                     member = staffs.filter_by_schedule_list(
@@ -133,7 +158,7 @@ def write_cells(
                         ws.cell(row=row, column=2 + num, value=free_value)
 
                     if isinstance(meeting_value, str):
-                        ws.cell(row=row, column=2 + num, value=meeting_value)
+                        ws.cell(row=row, column=2 + num, value="医局会")
 
             case "初期研修医":
                 break
