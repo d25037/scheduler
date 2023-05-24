@@ -36,7 +36,7 @@ class StaffList(UserList):
             return True
         return False
 
-    def filter_available_staffs(self, shift: str, room: Room):
+    def filter_available_staffs(self, room: Room):
         filtered = list(filter(lambda x: len(x.schedule) < 7, self.data))
         re_filtered: list[Staff] = []
         for staff in filtered:
@@ -64,7 +64,7 @@ class StaffList(UserList):
                 filter(
                     lambda x: x.schedule.get(shift) is None
                     and x.schedule.get(opposite) not in exclude_words,
-                    self.filter_available_staffs(shift=shift, room=room),
+                    self.filter_available_staffs(room=room),
                 )
             )
         )
