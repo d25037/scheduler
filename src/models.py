@@ -36,13 +36,19 @@ class StaffList(UserList):
             return True
         return False
 
-    def filter_available_staffs(self):
-        return StaffList(list(filter(lambda x: len(x.schedule) < 7, self.data)))
+    def filter_available_staffs(self, shift: str, room: Room):
+        filtered = list(filter(lambda x: len(x.schedule) < 7, self.data))
+        re_filtered: list[Staff] = []
+        for staff in filtered:
+            summed = sum(v == room for v in staff.schedule.values())
+            if summed < 2:
+                re_filtered.append(staff)
+        return StaffList(re_filtered)
 
     def filter_residents(self):
         return StaffList(list(filter(lambda x: x.rank <= 3, self.data)))
 
-    def filter_candidates(self, weekday: Weekday, am_pm: AmPm):
+    def filter_candidates(self, weekday: Weekday, am_pm: AmPm, room: Room):
         match am_pm:
             case "am":
                 shift = f"{weekday}_am"
@@ -58,7 +64,7 @@ class StaffList(UserList):
                 filter(
                     lambda x: x.schedule.get(shift) is None
                     and x.schedule.get(opposite) not in exclude_words,
-                    self.filter_available_staffs(),
+                    self.filter_available_staffs(shift=shift, room=room),
                 )
             )
         )
@@ -80,7 +86,9 @@ class StaffList(UserList):
         for day in weekday:
             am = f"{day}_am"
             if self.already_matched(shift=am, room=room) is False:
-                candidates_am = self.filter_candidates(weekday=day, am_pm="am")
+                candidates_am = self.filter_candidates(
+                    weekday=day, am_pm="am", room=room
+                )
                 list_of_each_staffs.append(
                     ShiftAmPm(
                         time=am,
@@ -91,7 +99,9 @@ class StaffList(UserList):
 
             pm = f"{day}_pm"
             if self.already_matched(shift=pm, room=room) is False:
-                candidates_pm = self.filter_candidates(weekday=day, am_pm="pm")
+                candidates_pm = self.filter_candidates(
+                    weekday=day, am_pm="pm", room=room
+                )
                 list_of_each_staffs.append(
                     ShiftAmPm(
                         time=pm,

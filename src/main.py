@@ -90,6 +90,8 @@ def main():
     )
     wb_created.save(output_file_path)
 
+    print(output_file_path)
+
     return
 
 
