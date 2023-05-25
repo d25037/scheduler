@@ -57,7 +57,7 @@ class StaffList(UserList):
                 shift = f"{weekday}_pm"
                 opposite = f"{weekday}_am"
 
-        exclude_words = ("①", "②", "③", "外勤")
+        exclude_words = ("①", "②", "③", "外勤", room)
 
         return StaffList(
             list(
