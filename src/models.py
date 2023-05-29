@@ -21,6 +21,7 @@ class Staff(BaseModel):
     rank: int
     col_number: int | None
     schedule: dict[str, str] = {}
+    pregnant: bool = False
 
 
 @dataclass
@@ -40,6 +41,9 @@ class StaffList(UserList):
         filtered = list(filter(lambda x: len(x.schedule) < 7, self.data))
         re_filtered: list[Staff] = []
         for staff in filtered:
+            if room == "RI" and staff.pregnant:
+                continue
+
             summed = sum(v == room for v in staff.schedule.values())
             if summed < 2:
                 re_filtered.append(staff)
