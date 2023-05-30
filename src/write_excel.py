@@ -1,10 +1,14 @@
+from logging import Logger
+
 from models import AppSettings, ColumnList, FilePath, StaffList
 from openpyxl import Workbook, load_workbook
 
 
-def read_template(file_path: FilePath) -> Workbook | FileNotFoundError:
+def read_template(file_path: FilePath, logger: Logger) -> Workbook | FileNotFoundError:
     try:
+        logger = logger.getChild(__name__)
         wb: Workbook = load_workbook(file_path)
+        logger.info(f"{file_path} have been loaded.")
         return wb
     except FileNotFoundError as e:
         return e

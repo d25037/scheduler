@@ -1,5 +1,5 @@
 from datetime import datetime
-from pprint import pprint
+from logging import Logger
 
 from models import (
     CellError,
@@ -15,12 +15,14 @@ from openpyxl.worksheet.worksheet import Worksheet
 from pydantic import FilePath
 
 
-def read_original_excel(
-    file_path: FilePath,
+def read_all_schedule(
+    file_path: FilePath, logger: Logger
 ) -> Workbook | FileNotFoundError:
     try:
+        logger = logger.getChild(__name__)
         wb: Workbook = load_workbook(file_path, data_only=True)
-        pprint(f"sheet_names: {wb.sheetnames}")
+        logger.info(f"{file_path} have been loaded.")
+        logger.debug(f"sheet_names: {wb.sheetnames}")
         return wb
     except FileNotFoundError as e:
         return e
@@ -74,10 +76,12 @@ def get_excel_column_number(
     columns: ColumnList,
     staffs: StaffList,
     date_and_weekday: DateAndWeekday,
+    logger: Logger,
 ):
     sheet_or_error: SheetNotFoundError | tuple[str, Worksheet] = get_worksheet(
         wb=wb, month=date_and_weekday.date.month
     )
+    logger = logger.getChild(__name__)
     if isinstance(sheet_or_error, SheetNotFoundError):
         return sheet_or_error
 
@@ -96,17 +100,16 @@ def get_excel_column_number(
             except IndexError:
                 continue
 
-    pprint(staffs)
-    pprint(columns)
+    logger.debug(staffs)
+    logger.debug(columns)
 
     return (columns, staffs)
 
 
 def read_schedule(
-    excel_rows: list[ExcelRow],
-    staffs: StaffList,
-    columns: ColumnList,
+    excel_rows: list[ExcelRow], staffs: StaffList, columns: ColumnList, logger: Logger
 ):
+    logger = logger.getChild(__name__)
     for excel_row in excel_rows:
         if excel_row.am_row is None or excel_row.pm_row is None:
             continue
@@ -146,7 +149,7 @@ def read_schedule(
             if isinstance(pm_value, str):
                 staff.schedule[f"{excel_row.weekday}_pm"] = pm_value
 
-    pprint(columns)
-    pprint(staffs)
+    logger.debug(columns)
+    logger.debug(staffs)
 
     return (columns, staffs)

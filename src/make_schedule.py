@@ -1,4 +1,4 @@
-from pprint import pprint
+from logging import Logger
 
 from models import Room, StaffList, Weekday
 
@@ -25,7 +25,8 @@ def make_schedule(staffs: StaffList, holiday: list[Weekday] | None):
     return (examination_room, staffs)
 
 
-def make_noon(staffs: StaffList, holiday: list[Weekday] | None):
+def make_noon(staffs: StaffList, holiday: list[Weekday] | None, logger: Logger):
+    logger = logger.getChild(__name__)
     room_names: list[Room] = ["CT", "MR"]
     noon_room: dict[str, dict[str, str]] = {"CT": {}, "MR": {}}
     weekday: list[Weekday] = ["monday", "tuesday", "wednesday", "thursday", "friday"]
@@ -50,7 +51,7 @@ def make_noon(staffs: StaffList, holiday: list[Weekday] | None):
 
             selected_staffs.append(selected_staff.name)
 
-    pprint(noon_room)
-    pprint(staffs)
+    logger.debug(noon_room)
+    logger.debug(staffs)
 
     return (noon_room, staffs)
