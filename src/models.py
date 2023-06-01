@@ -22,6 +22,7 @@ class Staff(BaseModel):
     col_number: int | None
     schedule: dict[str, str] = {}
     pregnant: bool = False
+    absent: bool = False
 
 
 @dataclass
@@ -38,7 +39,9 @@ class StaffList(UserList):
         return False
 
     def filter_available_staffs(self, room: Room):
-        filtered = list(filter(lambda x: len(x.schedule) < 7, self.data))
+        filtered = list(
+            filter(lambda x: len(x.schedule) < 7 and x.absent is False, self.data)
+        )
         re_filtered: list[Staff] = []
         for staff in filtered:
             if room == "RI" and staff.pregnant:
@@ -158,7 +161,8 @@ class StaffList(UserList):
                 lambda x: x.schedule.get(noon) is None
                 and x.schedule.get(am) not in exclude_words
                 and x.schedule.get(pm) not in exclude_words
-                and not (x.schedule.get(am) and x.schedule.get(pm)),
+                and not (x.schedule.get(am) and x.schedule.get(pm))
+                and x.absent is False,
                 self.data,
             )
         )
