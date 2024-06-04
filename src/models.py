@@ -1,14 +1,37 @@
 from collections import UserList
 from datetime import date, timedelta
+from enum import Enum, auto
 from random import choice
-from typing import Any, Literal, TypeAlias
+from typing import Any, Callable, Literal, TypeAlias
 
-from pydantic import BaseModel, DirectoryPath, FilePath, validator
+from pydantic import BaseModel, DirectoryPath, FilePath, field_validator
 from pydantic.dataclasses import dataclass
 
 Weekday: TypeAlias = Literal["monday", "tuesday", "wednesday", "thursday", "friday"]
+
+
 Room: TypeAlias = Literal["RI", "CT", "MR"]
 AmPm: TypeAlias = Literal["am", "pm"]
+
+
+class WeekdayEnum(Enum):
+    MONDAY = auto()
+    TUESDAY = auto()
+    WEDNESDAY = auto()
+    THURSDAY = auto()
+    FRIDAY = auto()
+
+
+class RoomEnum(Enum):
+    RI = auto()
+    CT = auto()
+    MR = auto()
+
+
+class AmPmNoon(Enum):
+    AM = auto()
+    PM = auto()
+    NOON = auto()
 
 
 class DateAndWeekday(BaseModel):
@@ -16,46 +39,72 @@ class DateAndWeekday(BaseModel):
     weekday: Weekday
 
 
+class Schedule(BaseModel):
+    weekday: WeekdayEnum
+    am_pm_noon: AmPmNoon
+    body: str
+
+
 class Staff(BaseModel):
     name: str
     rank: int
-    col_number: int | None
+    col_number: int | None = None
     schedule: dict[str, str] = {}
+    schedule_list: list[Schedule] | None = None
+    interpreting_cases: int = 0
     pregnant: bool = False
-    absent: bool = False
+    maternity_leave: bool = False
+    sick_leave: bool = False
+    rotate_oncology: bool = False
+    center_hospital: bool = True
+    resident_check: bool = True
 
 
 @dataclass
 class StaffList(UserList):
     data: list[Staff]
 
-    def filter_one_by_name(self, value: str) -> Staff:
-        filtered = list(filter(lambda x: x.name == value, self.data))
+    def filter(self, func: Callable) -> list[Staff]:
+        return list(filter(func, self.data))
+
+    def filter_one_by_name(self, name: str) -> Staff:
+        filtered = self.filter(lambda staff: staff.name == name)
         return filtered[0]
 
-    def already_matched(self, shift: str, room: Room):
-        if len(list(filter(lambda x: x.schedule.get(shift) == room, self.data))) > 0:
+    def matched_examination_room(self, shift: str, examination_room: Room) -> bool:
+        if (
+            len(
+                self.filter(lambda staff: staff.schedule.get(shift) == examination_room)
+            )
+            > 0
+        ):
             return True
         return False
 
-    def filter_available_staffs(self, room: Room):
-        filtered = list(
-            filter(lambda x: len(x.schedule) < 7 and x.absent is False, self.data)
+    def filter_available_staffs(self, examination_room: Room):
+        filtered = self.filter(
+            lambda staff: len(staff.schedule) < 7
+            and staff.rotate_oncology is False
+            and staff.maternity_leave is False
+            and staff.sick_leave is False
         )
         re_filtered: list[Staff] = []
         for staff in filtered:
-            if room == "RI" and staff.pregnant:
+            if examination_room == "RI" and staff.pregnant:
                 continue
 
-            summed = sum(v == room for v in staff.schedule.values())
+            summed = sum(shift == examination_room for shift in staff.schedule.values())
             if summed < 2:
                 re_filtered.append(staff)
         return StaffList(re_filtered)
 
     def filter_residents(self):
-        return StaffList(list(filter(lambda x: x.rank <= 3, self.data)))
+        return StaffList(self.filter(lambda staff: staff.rank <= 3))
 
-    def filter_candidates(self, weekday: Weekday, am_pm: AmPm, room: Room):
+    def filter_diagnostician(self, diagnostician_rank: bool):
+        return StaffList(self.filter(lambda staff: staff.rank >= diagnostician_rank))
+
+    def filter_candidates(self, weekday: Weekday, am_pm: AmPm, examination_room: Room):
         match am_pm:
             case "am":
                 shift = f"{weekday}_am"
@@ -64,19 +113,19 @@ class StaffList(UserList):
                 shift = f"{weekday}_pm"
                 opposite = f"{weekday}_am"
 
-        exclude_words = ("①", "②", "③", "外勤", room)
+        exclude_words = ("①", "②", "③", "外勤", examination_room)
 
         return StaffList(
             list(
                 filter(
-                    lambda x: x.schedule.get(shift) is None
-                    and x.schedule.get(opposite) not in exclude_words,
-                    self.filter_available_staffs(room=room),
+                    lambda staff: staff.schedule.get(shift) is None
+                    and staff.schedule.get(opposite) not in exclude_words,
+                    self.filter_available_staffs(examination_room=examination_room),
                 )
             )
         )
 
-    def make_shift(self, room: Room, holiday: list[Weekday] | None = None):
+    def make_shift(self, examination_room: Room, holiday: list[Weekday] | None = None):
         weekday: list[Weekday] = [
             "monday",
             "tuesday",
@@ -92,9 +141,14 @@ class StaffList(UserList):
         list_of_each_staffs: list[ShiftAmPm] = []
         for day in weekday:
             am = f"{day}_am"
-            if self.already_matched(shift=am, room=room) is False:
+            if (
+                self.matched_examination_room(
+                    shift=am, examination_room=examination_room
+                )
+                is False
+            ):
                 candidates_am = self.filter_candidates(
-                    weekday=day, am_pm="am", room=room
+                    weekday=day, am_pm="am", examination_room=examination_room
                 )
                 list_of_each_staffs.append(
                     ShiftAmPm(
@@ -105,9 +159,14 @@ class StaffList(UserList):
                 )
 
             pm = f"{day}_pm"
-            if self.already_matched(shift=pm, room=room) is False:
+            if (
+                self.matched_examination_room(
+                    shift=pm, examination_room=examination_room
+                )
+                is False
+            ):
                 candidates_pm = self.filter_candidates(
-                    weekday=day, am_pm="pm", room=room
+                    weekday=day, am_pm="pm", examination_room=examination_room
                 )
                 list_of_each_staffs.append(
                     ShiftAmPm(
@@ -120,25 +179,29 @@ class StaffList(UserList):
         return ShiftAmPmList(list_of_each_staffs)
 
     def filter_by_lower_rank(self):
-        lowest_rank = min(list(map(lambda x: x.rank, self.data)))
-        return StaffList(list(filter(lambda x: x.rank <= lowest_rank + 2, self.data)))
+        lowest_rank = min(list(map(lambda staff: staff.rank, self.data)))
+        return StaffList(
+            list(filter(lambda staff: staff.rank <= lowest_rank + 2, self.data))
+        )
 
     def random_fetch_one_by_lower_rank(self) -> Staff:
         return choice(self.filter_by_lower_rank())
 
     def filter_by_schedule(self, schedule: str, work: str):
         return StaffList(
-            list(filter(lambda x: x.schedule.get(schedule) == work, self.data))
+            self.filter(lambda staff: staff.schedule.get(schedule) == work)
         )
 
     def filter_by_schedule_list(self, schedule: str, works: list[str]):
         return StaffList(
-            list(filter(lambda x: x.schedule.get(schedule) in works, self.data))
+            self.filter(lambda staff: staff.schedule.get(schedule) in works)
         )
 
     def filter_by_schedule_exclude_list(self, schedule: str, excludes: list[str]):
-        filtered = filter(lambda x: x.schedule.get(schedule), self.data)
-        re_filtered = [x for x in filtered if x.schedule.get(schedule) not in excludes]
+        filtered = self.filter(lambda staff: staff.schedule.get(schedule))
+        re_filtered = [
+            staff for staff in filtered if staff.schedule.get(schedule) not in excludes
+        ]
         return StaffList(re_filtered)
 
     def update_staff(self, name: str, time: str, room_name: Room):
@@ -158,17 +221,21 @@ class StaffList(UserList):
 
         filtered = list(
             filter(
-                lambda x: x.schedule.get(noon) is None
-                and x.schedule.get(am) not in exclude_words
-                and x.schedule.get(pm) not in exclude_words
-                and not (x.schedule.get(am) and x.schedule.get(pm))
-                and x.absent is False,
+                lambda staff: staff.schedule.get(noon) is None
+                and staff.schedule.get(am) not in exclude_words
+                and staff.schedule.get(pm) not in exclude_words
+                and not (staff.schedule.get(am) and staff.schedule.get(pm))
+                and staff.rotate_oncology is False
+                and staff.maternity_leave is False
+                and staff.sick_leave is False,
                 self.data,
             )
         )
 
         if selected_staffs and filtered:
-            re_filtered = [x for x in filtered if x.name not in selected_staffs]
+            re_filtered = [
+                staff for staff in filtered if staff.name not in selected_staffs
+            ]
             return StaffList(re_filtered)
 
         return StaffList(filtered)
@@ -198,28 +265,33 @@ class AppSettings(BaseModel):
     day: int
     holiday: list[Weekday] | None = None
     column_list: list[str]
+    diagnostician_rank: int
     staffs: list[Staff]
 
-    @validator("month")
+    @field_validator("month")
+    @classmethod
     def month_validator(cls, v: int):
         if v < 1 or v > 12:
             raise ValueError("monthの値が不正です(1=<month=<12にしてください)")
         return v
 
-    @validator("day")
+    @field_validator("day")
+    @classmethod
     def day_validator(cls, v: int):
         if v < 1 or v > 31:
             raise ValueError("dayの値が不正です(1=<day=<31にしてください)")
         return v
 
-    @validator("column_list")
+    @field_validator("column_list")
+    @classmethod
     def column_validator(cls, v: list):
         unique_count = len(set(v))
         if len(v) != unique_count:
             raise ValueError("column_listに重複があります")
         return v
 
-    @validator("staffs")
+    @field_validator("staffs")
+    @classmethod
     def staffs_validator(cls, v: list):
         staff_name_list = list(map(lambda x: x.name, v))
         unique_count = len(set(staff_name_list))
@@ -239,13 +311,13 @@ class AppSettings(BaseModel):
     def get_date(self) -> date:
         monday = date(self.year, self.month, self.day)
         if monday.weekday() != 0:
-            raise ValueError("設定された日付が月曜日ではありません")
+            raise ValueError("The set date is not Monday.")
         return monday
 
     def monday(self) -> DateAndWeekday:
         monday = date(self.year, self.month, self.day)
         if monday.weekday() != 0:
-            raise ValueError("設定された日付が月曜日ではありません")
+            raise ValueError("The set date is not Monday.")
         return DateAndWeekday(date=monday, weekday="monday")
 
     def tuesday(self) -> DateAndWeekday:

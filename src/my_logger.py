@@ -1,21 +1,32 @@
-from logging import DEBUG, INFO, Formatter, Logger, StreamHandler, getLogger
-from typing import Literal, TypeAlias
+from enum import Enum
+from logging import (
+    DEBUG,
+    INFO,
+    Formatter,
+    Logger,
+    getLogger,
+)
 
-Level: TypeAlias = Literal["info", "debug"]
+from rich.logging import RichHandler
 
 
-def make_logger(name: str, level: Level = "info") -> Logger:
+class LogLevel(str, Enum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+
+
+def make_logger(name: str, level: LogLevel = LogLevel.INFO) -> Logger:
     logger: Logger = getLogger(name)
     match level:
-        case "info":
+        case LogLevel.INFO:
             logger.setLevel(INFO)
-        case "debug":
+        case LogLevel.DEBUG:
             logger.setLevel(DEBUG)
 
-    handler = StreamHandler()
+    handler = RichHandler()
     logger.addHandler(handler)
 
-    formatter = Formatter("%(asctime)s %(name)s [%(levelname)s] %(message)s")
+    formatter = Formatter("[%(asctime)s %(levelname)s %(name)s] %(message)s")
     handler.setFormatter(formatter)
 
     return logger

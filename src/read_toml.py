@@ -19,7 +19,7 @@ def read_toml(logger: Logger) -> AppSettings | FileNotFoundError | ValidationErr
             toml_data: dict[str, Any] = tomllib.load(f)
             logger.debug(toml_data)
             app_settings = AppSettings(**toml_data)
-            logger.debug(app_settings.dict())
+            logger.debug(app_settings.model_dump())
             return app_settings
     except (FileNotFoundError, ValidationError) as e:
         return e

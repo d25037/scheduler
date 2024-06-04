@@ -8,7 +8,7 @@ def read_template(file_path: FilePath, logger: Logger) -> Workbook | FileNotFoun
     try:
         logger = logger.getChild(__name__)
         wb: Workbook = load_workbook(file_path)
-        logger.info(f"{file_path} have been loaded.")
+        logger.info(f"{file_path} has been loaded.")
         return wb
     except FileNotFoundError as e:
         return e
@@ -34,6 +34,22 @@ def write_cells(
         "thursday_pm",
         "friday_am",
         "friday_pm",
+    ]
+
+    exclude_words = [
+        "CT",
+        "MR",
+        "RI",
+        "IVR",
+        "①",
+        "②",
+        "③",
+        "外勤",
+        "センター",
+        "みなとみらい",
+        "US",
+        "藤沢",
+        "読影",
     ]
 
     for i in range(100):
@@ -85,21 +101,6 @@ def write_cells(
                         ws.cell(row=row + j, column=2 + num, value=mem.name)
 
             case "その他":
-                exclude_words = [
-                    "CT",
-                    "MR",
-                    "RI",
-                    "IVR",
-                    "①",
-                    "②",
-                    "③",
-                    "外勤",
-                    "センター",
-                    "みなとみらい",
-                    "US",
-                    "藤沢",
-                ]
-
                 for num, value in enumerate(days):
                     member = staffs.filter_by_schedule_exclude_list(
                         schedule=value, excludes=exclude_words
@@ -169,5 +170,19 @@ def write_cells(
 
             case _:
                 continue
+
+    ws2 = wb["py2"]
+
+    for i in range(40):
+        col_a = ws2.cell(row=2 + i, column=1).value
+        if not isinstance(col_a, str):
+            break
+
+        staff = staffs.filter_one_by_name(name=col_a)
+
+        for num, day in enumerate(days):
+            staff_schedule = staff.schedule.get(day)
+            if staff_schedule not in ["CT", "MR", "RI", "IVR", "読影"]:
+                ws2.cell(row=2 + i, column=2 + num, value=staff_schedule)
 
     return wb

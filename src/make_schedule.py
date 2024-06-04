@@ -8,8 +8,8 @@ def make_schedule(staffs: StaffList, holiday: list[Weekday] | None):
     examination_room: dict[str, dict[str, str]] = {"RI": {}, "CT": {}, "MR": {}}
 
     for room_name in room_names:
-        for i in range(10):
-            shifts = staffs.make_shift(room=room_name, holiday=holiday)
+        while True:
+            shifts = staffs.make_shift(examination_room=room_name, holiday=holiday)
             if len(shifts) == 0:
                 break
 

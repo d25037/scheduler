@@ -1,0 +1,14 @@
+{
+    "dummyA": "dummyAA",
+    "dummyB": "dummyBB",
+    "staffs": [
+        {
+            "id": "1",
+            "name": "愛川"
+        },
+        {
+            "id": "2",
+            "name": "平本"
+        }
+    ]
+}

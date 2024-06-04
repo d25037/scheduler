@@ -29,11 +29,13 @@ def read_all_schedule(
 
 
 def get_worksheet(
-    wb: Workbook, month: int
+    wb: Workbook, date_and_weekday: DateAndWeekday
 ) -> SheetNotFoundError | tuple[str, Worksheet]:
-    month_str = str(month) + "月"
+    year_str = str(date_and_weekday.date.year) + "年"
+    month_str = str(date_and_weekday.date.month) + "月"
+    year_month = year_str + month_str
 
-    filtered = list(filter(lambda x: month_str in x, wb.sheetnames))
+    filtered = list(filter(lambda x: year_month == x, wb.sheetnames))
     if len(filtered) == 0:
         return SheetNotFoundError("Sheetが見つかりませんでした")
 
@@ -46,12 +48,13 @@ def get_excel_row(
     wb: Workbook, date_and_weekday: DateAndWeekday
 ) -> ExcelRow | SheetNotFoundError | CellError | RowNotFoundError:
     sheet_or_error: SheetNotFoundError | tuple[str, Worksheet] = get_worksheet(
-        wb=wb, month=date_and_weekday.date.month
+        wb=wb, date_and_weekday=date_and_weekday
     )
     if isinstance(sheet_or_error, SheetNotFoundError):
         return sheet_or_error
 
     sheet_name, ws = sheet_or_error
+    # print(sheet_name)
 
     for i, search_am_row in enumerate(ws.values):
         day = search_am_row[0]
@@ -79,7 +82,7 @@ def get_excel_column_number(
     logger: Logger,
 ):
     sheet_or_error: SheetNotFoundError | tuple[str, Worksheet] = get_worksheet(
-        wb=wb, month=date_and_weekday.date.month
+        wb=wb, date_and_weekday=date_and_weekday
     )
     logger = logger.getChild(__name__)
     if isinstance(sheet_or_error, SheetNotFoundError):
