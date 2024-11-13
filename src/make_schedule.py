@@ -1,6 +1,5 @@
-from logging import Logger
-
 from models import Room, StaffList, Weekday
+from my_logger import my_loguru
 
 
 def make_schedule(staffs: StaffList, holiday: list[Weekday] | None):
@@ -25,8 +24,9 @@ def make_schedule(staffs: StaffList, holiday: list[Weekday] | None):
     return (examination_room, staffs)
 
 
-def make_noon(staffs: StaffList, holiday: list[Weekday] | None, logger: Logger):
-    logger = logger.getChild(__name__)
+def make_noon(staffs: StaffList, holiday: list[Weekday] | None):
+    logger = my_loguru()
+
     room_names: list[Room] = ["CT", "MR"]
     noon_room: dict[str, dict[str, str]] = {"CT": {}, "MR": {}}
     weekday: list[Weekday] = ["monday", "tuesday", "wednesday", "thursday", "friday"]

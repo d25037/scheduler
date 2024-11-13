@@ -3,6 +3,10 @@ from datetime import datetime
 from time import perf_counter
 from typing import cast
 
+from loguru import logger
+from typer import Option, Typer
+from typing_extensions import Annotated
+
 from make_schedule import make_noon, make_schedule
 from models import (
     AppSettings,
@@ -14,7 +18,7 @@ from models import (
     StaffList,
 )
 from modify import modify_examination_room
-from my_logger import LogLevel, make_logger
+from my_logger import LogLevel
 from read_excel import (
     get_excel_column_number,
     get_excel_row,
@@ -22,12 +26,13 @@ from read_excel import (
     read_schedule,
 )
 from read_toml import read_toml
-from typer import Option
-from typing_extensions import Annotated
 from write_excel import read_template, write_cells
 
+app = Typer()
 
-def cli(
+
+@app.command()
+def run(
     log_level: Annotated[
         LogLevel,
         Option("--log-level", "-l", help="Set log level", case_sensitive=False),
@@ -38,15 +43,16 @@ def cli(
 ):
     t0 = perf_counter()
 
-    logger = make_logger(name=__name__, level=log_level)
+    if log_level == LogLevel.DEBUG:
+        os.environ["LOG_LEVEL"] = "DEBUG"
 
     logger.info("app starts.")
 
-    settings = read_toml(logger=logger)
+    settings = read_toml()
     if not isinstance(settings, AppSettings):
         return logger.critical(settings)
 
-    wb = read_all_schedule(settings.all_schedule_file_path, logger=logger)
+    wb = read_all_schedule(settings.all_schedule_file_path)
     if isinstance(wb, FileNotFoundError):
         return logger.critical(wb)
 
@@ -69,26 +75,23 @@ def cli(
         columns=settings.get_columns_list(),
         staffs=settings.get_staff_list(),
         date_and_weekday=settings.monday(),
-        logger=logger,
     )
 
     columns, staffs = cast(tuple[ColumnList, StaffList], result)
 
     columns, staffs = read_schedule(
-        excel_rows=excel_rows, staffs=staffs, columns=columns, logger=logger
+        excel_rows=excel_rows, staffs=staffs, columns=columns
     )
 
     examination_room, staffs = make_schedule(staffs=staffs, holiday=settings.holiday)
 
-    noon_room, staffs = make_noon(
-        staffs=staffs, holiday=settings.holiday, logger=logger
-    )
+    noon_room, staffs = make_noon(staffs=staffs, holiday=settings.holiday)
 
     examination_room, staffs = modify_examination_room(
         examination_room=examination_room, staffs=staffs, holiday=settings.holiday
     )
 
-    output_template = read_template(settings.output_template_file_path, logger=logger)
+    output_template = read_template(settings.output_template_file_path)
     if isinstance(output_template, FileNotFoundError):
         return logger.critical(f"{settings.output_template_file_path} not found.")
 

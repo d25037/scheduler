@@ -1,5 +1,7 @@
 .DS_Store
 .mypy_cache
+.ruff_cache
+.venv
 __pycache__
 app_settings.toml
 *.xlsx

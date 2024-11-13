@@ -1,28 +1,13 @@
-[tool.poetry]
+[project]
 name = "scheduler"
 version = "0.1.0"
-description = ""
-authors = ["d25037 <d25037@gmail.com>"]
+description = "Add your description here"
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.11"
-pandas = "^2.0.0"
-openpyxl = "^3.1.2"
-pydantic = "^1.10.7"
-types-openpyxl = "^3.1.0.32"
-uv = "^0.2.6"
-
-[tool.poetry.group.dev.dependencies]
-mypy = "^1.7.0"
-ruff = "^0.1.5"
-
-[tool.isort]
-src_paths = "src"
-
-[tool.mypy]
-plugins = ["pydantic.mypy"]
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires-python = ">=3.12"
+dependencies = [
+    "loguru>=0.7.2",
+    "openpyxl>=3.1.5",
+    "pydantic>=2.9.2",
+    "streamlit>=1.40.1",
+    "typer>=0.13.0",
+]

@@ -1,5 +1,4 @@
 from datetime import datetime
-from logging import Logger
 
 from models import (
     CellError,
@@ -10,16 +9,15 @@ from models import (
     SheetNotFoundError,
     StaffList,
 )
+from my_logger import my_loguru
 from openpyxl import Workbook, load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from pydantic import FilePath
 
 
-def read_all_schedule(
-    file_path: FilePath, logger: Logger
-) -> Workbook | FileNotFoundError:
+def read_all_schedule(file_path: FilePath) -> Workbook | FileNotFoundError:
+    logger = my_loguru()
     try:
-        logger = logger.getChild(__name__)
         wb: Workbook = load_workbook(file_path, data_only=True)
         logger.info(f"{file_path} have been loaded.")
         logger.debug(f"sheet_names: {wb.sheetnames}")
@@ -79,12 +77,11 @@ def get_excel_column_number(
     columns: ColumnList,
     staffs: StaffList,
     date_and_weekday: DateAndWeekday,
-    logger: Logger,
 ):
     sheet_or_error: SheetNotFoundError | tuple[str, Worksheet] = get_worksheet(
         wb=wb, date_and_weekday=date_and_weekday
     )
-    logger = logger.getChild(__name__)
+    logger = my_loguru()
     if isinstance(sheet_or_error, SheetNotFoundError):
         return sheet_or_error
 
@@ -109,10 +106,8 @@ def get_excel_column_number(
     return (columns, staffs)
 
 
-def read_schedule(
-    excel_rows: list[ExcelRow], staffs: StaffList, columns: ColumnList, logger: Logger
-):
-    logger = logger.getChild(__name__)
+def read_schedule(excel_rows: list[ExcelRow], staffs: StaffList, columns: ColumnList):
+    logger = my_loguru()
     for excel_row in excel_rows:
         if excel_row.am_row is None or excel_row.pm_row is None:
             continue

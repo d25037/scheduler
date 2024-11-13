@@ -6,7 +6,10 @@ from logging import (
     Logger,
     getLogger,
 )
+from os import environ
+from sys import stderr
 
+from loguru import logger
 from rich.logging import RichHandler
 
 
@@ -29,4 +32,10 @@ def make_logger(name: str, level: LogLevel = LogLevel.INFO) -> Logger:
     formatter = Formatter("[%(asctime)s %(levelname)s %(name)s] %(message)s")
     handler.setFormatter(formatter)
 
+    return logger
+
+
+def my_loguru():
+    logger.remove()
+    logger.add(stderr, level=environ.get("LOG_LEVEL", "INFO"))
     return logger
